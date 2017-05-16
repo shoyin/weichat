@@ -103,7 +103,109 @@ exports.reply =function* (next) {
 				type :'video',
 				mediaId:data.media_id
 			}
-		}else {
+		}
+		else if( content === '10'){
+			var picdata = yield weichatApi.uploadMaterial('xx',__dirname + '/2.jpg',{});
+
+			console.log(11111111111111);
+			console.log(picdata);
+			var media ={
+				articles: [{
+
+					title: 'xxxxxx',
+
+					thumb_media_id: picdata.media_id,
+
+					author: 'zzzz',
+
+					digest: 'zz',
+
+					show_cover_pic: 1,
+
+					content: 'zzzz',
+
+					content_source_url: 'www.baidu.com'
+
+				}]
+			};
+
+			
+			console.log(media);
+			// data = yield weichatApi.uploadMaterial('news',media,{});
+			
+			console.log(data);
+			data = yield weichatApi.fetchMaterial(picdata.media_id,'news',{});
+
+			console.log(data);
+
+
+			var item = data.news_item;
+
+
+			var news = [];
+			item.forEach(function (item) {
+				news.push({
+					title:item.title,
+					description:item.digest,
+					picUrl:picdata.url,
+					url: item.url
+
+
+
+				});
+
+			})
+			reply = news;
+
+		}else if( content === '12'){
+// 			var group = yield weichatApi.createGroup('wechat');
+// 			console.log('add');
+// 			console.log(group);
+//
+// 			var groups = yield weichatApi.fetchGroup();
+//
+// 			console.log(groups);
+//
+// 			var groupw = yield weichatApi.checkGroup(message.FromUserName);
+// console.log('new');
+// 			console.log(groupw);
+//
+// 			var groupmove = yield weichatApi.batchmoveGroup(message.FromUserName,100);
+// 			console.log('move');
+// 			console.log(groupmove);
+//
+//
+// 			groups = yield weichatApi.fetchGroup();
+//
+// 			console.log('hou');
+// 			console.log(groups);
+//
+//
+// 			var groupmove = yield weichatApi.batchmoveGroup([message.FromUserName],101);
+// 			console.log('move');
+// 			console.log(groupmove);
+//
+//
+// 			groups = yield weichatApi.fetchGroup();
+//
+// 			console.log('piliang');
+// 			console.log(groups);
+//
+//
+// 			var groupmove = yield weichatApi.updateGroup(100,'aaaaaaaaaa');
+// 			console.log('update');
+// 			console.log(groupmove);
+//
+			var groupmove = yield weichatApi.delGroup(105);
+// 			console.log('del');
+			var groups = yield weichatApi.fetchGroup();
+
+			console.log('hou');
+			console.log(groups);
+			reply = 'group'
+		}
+
+		else {
 
 			var data = yield weichatApi.uploadMaterial('image',__dirname + '/33.jpg',{type:'image'});
 

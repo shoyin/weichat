@@ -12,14 +12,30 @@ var fs = require('fs');
 var api ={
 	accessToken:prefix + 'token?grant_type=client_credential',
 	temporary:{
-		upload :prefix+'media/upload?'
+		upload :prefix+'media/upload?',
+		fetch :prefix+'media/get?'
 	},
 	permanent:{
 		// https://api.weixin.qq.com/cgi-bin/material/add_news?access_token=ACCESS_TOKEN
 		upload :prefix+'material/add_material?',
+		fetch :prefix+'material/get_material?',
 		uploadNews :prefix+'material/add_news?',
-		uploadImage :prefix+'media/uploadimg?'
+		uploadImage :prefix+'media/uploadimg?',
+		update :prefix+'media/update_news?',
+		del :prefix+'media/del_material?',
+		count :prefix+'media/get_materialcount?',
+		batch :prefix+'media/batchget_materialcount?',
 		// uploadNews :prefix+'material/add_news?'
+	},
+	group:{
+		create:prefix + 'groups/create?',
+		get:prefix + 'groups/get?',
+		check:prefix + 'groups/getid?',
+		update:prefix + 'groups/update?',
+		move:prefix + 'groups/members/update?',
+		batchupdate:prefix + 'groups/members/batchupdate?',
+		del:prefix + 'groups/delete?',
+
 	}
 };
 function Weichat(opts) {
@@ -110,11 +126,12 @@ Weichat.prototype.uploadMaterial = function (type,material,permanent) {
 			uploadUrl = api.permanent.uploadNews;
 			form = material;
 
+			_.extend(form,permanent);
 		}else {
 			form.media = fs.createReadStream(material);
 		}
 
-		_.extend(form,permanent);
+
 
 	}else {
 		form.media = fs.createReadStream(material);
@@ -144,6 +161,8 @@ Weichat.prototype.uploadMaterial = function (type,material,permanent) {
 				if(type === 'news'){
 					options.body = form;
 				}else {
+					
+					console.log(form);
 					options.formData = form;
 				}
 
@@ -165,6 +184,445 @@ Weichat.prototype.uploadMaterial = function (type,material,permanent) {
 			})
 	})
 };
+
+Weichat.prototype.fetchMaterial = function (mediaId,type,permanent) {
+	var that = this;
+	
+	var fetchUrl = api.temporary.fetch;
+
+	if(permanent){
+		fetchUrl = api.permanent.fetch;
+	}
+
+	return new Promise(function (resolve,reject) {
+		that
+			.fetchAccessToken()
+			.then(function (data) {
+				var url = fetchUrl + 'access_token=' + data.access_token + '&media_id=' + mediaId;
+				var form = {};
+				var options ={
+					method : 'POST',
+					url : url,
+					json : true
+				};
+				if(permanent){
+					form.media_id = mediaId;
+					form.access_token = data.access_token;
+					options.body = form
+				}else {
+
+					if(type ==="video"){
+						url.replace('https://','https://');
+					}
+
+					url += "&media_id" + mediaId
+				}
+				if(type ==='news' || type ==="vedio"){
+
+					request(options).then(function (response) {
+						var _data = response.body;
+						if(_data){
+							resolve(_data);
+						}else {
+							throw new Error('faild')
+						}
+					});
+				}else {
+					resolve(url);
+				}
+
+		})
+	})
+};
+
+Weichat.prototype.delMaterial = function (mediaId) {
+	var that = this;
+	var form = {
+		media_id :mediaId
+	};
+	return new Promise(function (resolve,reject) {
+		that
+			.fetchAccessToken()
+			.then(function (data) {
+				var url = api.permanent.del + 'access_token=' + data.access_token + '&media_id=' + mediaId;
+
+				var options ={
+					method : 'POST',
+					url : url,
+					json : true,
+					body:form
+				};
+
+				request(options).then(function (response) {
+					var _data = response.body;
+					if(_data){
+						resolve(_data);
+					}else {
+						throw new Error('faild')
+					}
+				});
+			})
+	})
+};
+
+/*
+Weichat.prototype.updateMaterial = function (mediaId,news) {
+	var that = this;
+	var form = {
+		media_id :mediaId
+	};
+
+	_.extend(form,news);
+	return new Promise(function (resolve,reject) {
+		that
+			.fetchAccessToken()
+			.then(function (data) {
+				var url = api.permanent.update + 'access_token=' + data.access_token + '&media_id=' + mediaId;
+				var options ={
+					method : 'POST',
+					url : url,
+					json : true,
+					body:form
+				};
+
+				request(options).then(function (response) {
+					var _data = response.body;
+					if(_data){
+						resolve(_data);
+					}else {
+						throw new Error('faild')
+					}
+				});
+			})
+	})
+};
+*/
+
+
+Weichat.prototype.countMaterial = function () {
+	var that = this;
+
+	return new Promise(function (resolve,reject) {
+		that
+			.fetchAccessToken()
+			.then(function (data) {
+				var url = api.permanent.count + 'access_token=' + data.access_token;
+				var options ={
+					method : 'GET',
+					url : url,
+					json : true
+				};
+
+				request(options).then(function (response) {
+					var _data = response.body;
+
+					console.log(_data);
+					if(_data){
+						resolve(_data);
+					}else {
+						throw new Error('faild')
+					}
+				})
+			})
+	})
+};
+
+Weichat.prototype.batchMaterial = function (options) {
+	var that = this;
+
+	options.type = options.type ||'image';
+	options.offset = options.offset ||0;
+	options.count = options.count ||1;
+	return new Promise(function (resolve,reject) {
+		that
+			.fetchAccessToken()
+			.then(function (data) {
+				var url = api.permanent.batch + 'access_token=' + data.access_token;
+				var option ={
+					method : 'POST',
+					url : url,
+					json : true,
+					body:options
+
+				};
+
+				request(option).then(function (response) {
+					var _data = response.body;
+
+					console.log(_data);
+					if(_data){
+						resolve(_data);
+					}else {
+						throw new Error('faild')
+					}
+				})
+			})
+	})
+};
+
+
+Weichat.prototype.createGroup = function (name) {
+
+	var that = this;
+	return new Promise(function (resolve,reject) {
+		that
+			.fetchAccessToken()
+			.then(function (data) {
+				var url = api.group.create + 'access_token=' + data.access_token;
+
+				var options ={
+					group:{
+						name:name
+					}
+				};
+				var urlData ={
+					method : 'POST',
+					url : url,
+					json : true,
+					body:options
+
+				};
+
+				request(urlData).then(function (response) {
+					var _data = response.body;
+
+					console.log(_data);
+					if(_data){
+						resolve(_data);
+					}else {
+						throw new Error('create')
+					}
+				})
+			})
+	})
+};
+
+Weichat.prototype.fetchGroup = function (name) {
+
+	var that = this;
+	return new Promise(function (resolve,reject) {
+		that
+			.fetchAccessToken()
+			.then(function (data) {
+				var url = api.group.get + 'access_token=' + data.access_token;
+
+				var urlData ={
+					url : url,
+					json : true,
+
+				};
+
+				request(urlData).then(function (response) {
+					var _data = response.body;
+
+					console.log(_data);
+					if(_data){
+						resolve(_data);
+					}else {
+						throw new Error('fetch')
+					}
+				})
+			})
+	})
+};
+
+
+Weichat.prototype.checkGroup = function (openId) {
+
+	var that = this;
+	return new Promise(function (resolve,reject) {
+		that
+			.fetchAccessToken()
+			.then(function (data) {
+				var url = api.group.check + 'access_token=' + data.access_token;
+
+
+				var options ={
+					openid:openId
+				};
+				var urlData ={
+					method : 'POST',
+					url : url,
+					json : true,
+					body:options
+
+				};
+
+				request(urlData).then(function (response) {
+					var _data = response.body;
+
+					console.log(_data);
+					if(_data){
+						resolve(_data);
+					}else {
+						throw new Error('check')
+					}
+				})
+			})
+	})
+};
+
+
+
+Weichat.prototype.updateGroup = function (id,name) {
+
+	var that = this;
+	return new Promise(function (resolve,reject) {
+		that
+			.fetchAccessToken()
+			.then(function (data) {
+				var url = api.group.update + 'access_token=' + data.access_token;
+
+
+				var options ={
+					group:{
+						id:id,
+						name:name
+					}
+				};
+				var urlData ={
+					method : 'POST',
+					url : url,
+					json : true,
+					body:options
+
+				};
+
+				request(urlData).then(function (response) {
+					var _data = response.body;
+
+					console.log(_data);
+					if(_data){
+						resolve(_data);
+					}else {
+						throw new Error('update')
+					}
+				})
+			})
+	})
+};
+
+
+// Weichat.prototype.moveGroup = function (openid,to) {
+//
+// 	var that = this;
+// 	return new Promise(function (resolve,reject) {
+// 		that
+// 			.fetchAccessToken()
+// 			.then(function (data) {
+// 				var url = api.group.move + 'access_token=' + data.access_token;
+//
+//
+// 				var options ={
+// 					openid:openid,
+// 					to_groupid:to
+// 				};
+// 				var urlData ={
+// 					method : 'POST',
+// 					url : url,
+// 					json : true,
+// 					body:options
+//
+// 				};
+//
+// 				request(urlData).then(function (response) {
+// 					var _data = response.body;
+//
+// 					console.log(_data);
+// 					if(_data){
+// 						resolve(_data);
+// 					}else {
+// 						throw new Error('move')
+// 					}
+// 				})
+// 			})
+// 	})
+// };
+
+Weichat.prototype.batchmoveGroup = function (openids,to) {
+
+	var that = this;
+
+	return new Promise(function (resolve,reject) {
+		that
+			.fetchAccessToken()
+			.then(function (data) {
+
+				var options ={
+					to_groupid:to
+				};
+				if(_.isArray(openids)){
+					
+					console.log(1111111111);
+					var url = api.group.batchupdate + 'access_token=' + data.access_token;
+					options.openid_list = openids
+				}else {
+					var url = api.group.move + 'access_token=' + data.access_token;
+					options.openid = openids
+				}
+
+				var urlData ={
+					method : 'POST',
+					url : url,
+					json : true,
+					body:options
+
+				};
+
+				request(urlData).then(function (response) {
+					var _data = response.body;
+
+					console.log(_data);
+					if(_data){
+						resolve(_data);
+					}else {
+						throw new Error('move')
+					}
+				})
+			})
+	})
+};
+
+Weichat.prototype.delGroup = function (id) {
+
+	var that = this;
+
+
+	return new Promise(function (resolve,reject) {
+		that
+			.fetchAccessToken()
+			.then(function (data) {
+
+				var url = api.group.del + 'access_token=' + data.access_token;
+				var options ={
+					group:{
+						id:id
+					}
+				};
+
+				var urlData ={
+					method : 'POST',
+					url : url,
+					json : true,
+					body:options
+
+				};
+
+				request(urlData).then(function (response) {
+					var _data = response.body;
+
+					console.log(_data);
+					if(_data){
+						resolve(_data);
+					}else {
+						throw new Error('del')
+					}
+				})
+			})
+	})
+};
+
+
 
 
 Weichat.prototype.reply = function () {
